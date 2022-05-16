@@ -493,46 +493,42 @@ void rbf::runGen(int n) {
     vector<int> min;
     Data childPlaceholder;
     vector<int> indexes;
-    int cnt = 0;
-    for (int iter = 0; iter < 5; iter++) {
+    Matrix holder;
+    Data summ;
+
+    for (int iter = 0; iter < 45; iter++) {
 
         sum.clear();
-        childPlaceholder.clear();
         min.clear();
         indexes.clear();
-
+        holder.clear();
+        summ.clear();
 
         for (int i = 0; i < n; i++) {
             double sqe = genTrainSumSquaredError(normalize(i));
             sum.push_back(sqe);
-//        cout<<"sqe is : "<<sqe<<endl;
+//            cout<<"SSE is : "<<sqe<<endl;
         }
 
         min = findBestIndices(sum, GenSize);
 
-        // 1) Number of parents that will be used. -> (even numbers within the range of [2,n])
-        T = ((2 / 2) + rand() % ((copychrom.size() - 2 + 2) / 2)) * 2;
+        // 1) Number of parents that will be used. -> (even numbers within the range of [2,n-GenSize])
+        T = ((2 / 2) + rand() % ((copychrom.size() - GenSize - 2 + 2) / 2)) * 2;
+        sort(min.begin(), min.end(), greater<int>());
 
-        for (int i = 0; i < min.size(); i++)
-            sum.erase(sum.begin() + min[i]);
-
-        // 2) Get the #T best chromosomes of the remainings based on their fitness.
-        sort(sum.begin(), sum.end());
-
-        for (int i = 0; i < T; i++)
-            childPlaceholder.push_back(sum[i]);
-
-        // Get the indexes of the chromosome to be selected for crossover.
-        for (int i = 0; i < n; i++) {
-            double sqe = genTrainSumSquaredError(normalize(i));
-            for (int j = 0; j < childPlaceholder.size(); j++) {
-                if (isEqual(sqe, childPlaceholder[j]))
-                    indexes.push_back(i);
-            }
+        for (int i = 0; i < min.size(); i++) {
+            holder.push_back(copychrom[min[i]]);
+            copychrom.erase(copychrom.begin() + min[i]);
         }
 
-        for (int i = 0; i < min.size(); i++)
-            sum.push_back(min[i]);
+        // 2) Get the #T best chromosomes of the remainings based on their fitness.
+        // Get the indexes of the chromosome to be selected for crossover.
+        for (int i = 0; i < copychrom.size(); i++) {
+            double sqe = genTrainSumSquaredError(normalize(i));
+            summ.push_back(sqe);
+        }
+        indexes = findBestIndices(summ, T);
+
         // 3) Perform Whole Arithmetic Recombination on the selected parents.
         for (int i = 1; i < indexes.size(); i += 2) {
             for (int j = 0; j < copychrom[0].size(); j++) {
@@ -541,15 +537,19 @@ void rbf::runGen(int n) {
             }
         }
 
+        // Reassign best chromosomes
+        for (int i = 0; i < holder.size(); i++)
+            copychrom.push_back(holder[i]);
+
         //mutation procedure
         for (int i = 0; i < copychrom.size(); i++) {
             for (int j = 0; j < copychrom[i].size(); j++) {
                 t = uni(r);
                 if (t > 0.5) {
-                    double delta = Delta(iter, 5, decodedRight[j] - copychrom[i][j], r_constant);
+                    double delta = Delta(iter, 45, decodedRight[j] - copychrom[i][j], r_constant);
                     copychrom[i][j] = copychrom[i][j] + delta;
                 } else {
-                    double delta = Delta(iter, 5, copychrom[i][j] - decodedLeft[j], r_constant);
+                    double delta = Delta(iter, 45, copychrom[i][j] - decodedLeft[j], r_constant);
                     copychrom[i][j] = copychrom[i][j] - delta;
                 }
             }
