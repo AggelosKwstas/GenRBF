@@ -1,3 +1,4 @@
+
 #ifndef KMEANS_CPP_RBF_H
 #define KMEANS_CPP_RBF_H
 
@@ -40,6 +41,7 @@ private:
 
     double maxRight;
     double minLeft;
+    double sse;
 public:
     rbf();
 
@@ -55,7 +57,7 @@ public:
 
     bool isEqual(double a, double b);
 
-    void RbfTrain();
+    void RbfTrain(vector<Data> c);
 
     double TrainSumSquaredError();
 
@@ -64,7 +66,7 @@ public:
     void MinimumClassificationError();
 
 //  Genetic Algorithm implemnentaion
-    double genTrainSumSquaredError(Matrix genCenter);
+    double genTrainSumSquaredError(vector<Data> genCenter);
 
     void setBounds();
 
@@ -74,23 +76,21 @@ public:
 
     void decode(double element);
 
-    Matrix normalize(int index);
+    void run();
 
-    double findNthLargestElement(vector<double> &v, int element);
+    Matrix convert(int index);
 
-    double findNthMinimumElement(vector<double> &v, int index);
-
-//    Data unNormalize(Matrix child);
+//    Data unconvert(Matrix child);
 
 //    void decodeBounds();
 
-    Data decodeChild(Data child);
+    Data decodeChild(Data &child);
 
     double Delta(int iter, int iterMax, double y, double r);
 
-    vector<int> findBestIndices(vector<double> times, const int &N);
+    vector<int> findBestIndices(vector<double> &times, const int &N);
 
-    vector<int> findWorstIndices(vector<double> times, const int &N);
+    vector<int> findWorstIndices(vector<double> &times, const int &N);
 
 
 };

@@ -198,7 +198,8 @@ double rbf::TrainSumSquaredError() {
         }
         sum += pow(train->getY(i) - cnt, 2);
     }
-    return 100 * sum / train->rows();
+    sse = 100 * sum / train->rows();
+    return sse;
 }
 
 bool rbf::isEqual(double a, double b) {
@@ -279,17 +280,7 @@ void rbf::MinimumClassificationError() {
             }
         }
     }
-    cout << "Minimum Classification error : " << 100 * missed / train->rows();
-}
-
-double rbf::findNthLargestElement(vector<double> &v, int element) {
-    sort(v.begin(), v.end());
-    return v[v.size() - element];
-}
-
-double rbf::findNthMinimumElement(vector<double> &v, int index) {
-    std::nth_element(v.begin(), v.begin() + 1, v.end(), std::greater<int>());
-    return v[index - 1];
+    cout << "Minimum Classification error : " << 100 * missed / train->rows() << endl;
 }
 
 void rbf::decode(double element) {
@@ -316,7 +307,7 @@ void rbf::decode(double element) {
     }
 }
 
-Matrix rbf::normalize(int index) {
+Matrix rbf::convert(int index) {
 
     Matrix copyCenter;
     copyCenter.resize(NumberOfWeights);
@@ -350,7 +341,7 @@ Matrix rbf::normalize(int index) {
 }
 
 
-double rbf::genTrainSumSquaredError(Matrix genCenter) {
+double rbf::genTrainSumSquaredError(vector<Data> genCenter) {
     Data summ;
     summ.resize(genCenter.size());
     double cnt;
@@ -386,21 +377,6 @@ void rbf::setBounds() {
         Right.at(m) = F_constant * variance[i];
         m = m + 1;
     }
-    //bounds gia ta chromosomes
-    srand(time(0));
-//    int random1 = rand() % Right.size();
-//    int random2 = rand() % Left.size();
-//
-//    maxRight = Right[random1];
-//    minLeft = Left[random2];
-//
-//    if (isEqual(maxRight, F_constant * variance[0])) {
-//        maxRight = findNthLargestElement(Right, 2);
-//    }
-//
-//    if (isEqual(minLeft, -F_constant * variance[0])) {
-//        minLeft = findNthMinimumElement(Left, 2);
-//    }
 }
 
 
@@ -435,10 +411,11 @@ double rbf::Delta(int iter, int iterMax, double y, double r) {
     double result;
 
     result = y * (1 - pow(r, pow((1 - (double) iter / (double) iterMax), b)));
+
     return result;
 }
 
-vector<int> rbf::findBestIndices(vector<double> times, const int &N) {
+vector<int> rbf::findBestIndices(vector<double> &times, const int &N) {
     vector<int> indices(times.size());
     std::iota(indices.begin(), indices.end(), 0);
 
@@ -448,7 +425,7 @@ vector<int> rbf::findBestIndices(vector<double> times, const int &N) {
     return vector<int>(indices.begin(), indices.begin() + N);
 }
 
-vector<int> rbf::findWorstIndices(vector<double> times, const int &N) {
+vector<int> rbf::findWorstIndices(vector<double> &times, const int &N) {
     vector<int> indices(times.size());
     std::iota(indices.begin(), indices.end(), 0);
 
@@ -459,6 +436,7 @@ vector<int> rbf::findWorstIndices(vector<double> times, const int &N) {
 }
 
 void rbf::runGen(int n) {
+    int iterMax = 200;
     maxRight = 0;
     Data decodedRight = decodeChild(Right);
     for (int i = 0; i < decodedRight.size(); i++) {
@@ -473,47 +451,73 @@ void rbf::runGen(int n) {
     }
     setChromosomes(n, maxRight, minLeft);
     decode(variance[0]);
-    double selectionRate = 0.2;
-    int GenSize = abs(1 - selectionRate * n);
+    double selectionRate = 0.9;
+    double GenSize = (1 - selectionRate) * n;
     Data sum;
     double lower_bound = -0.5;
     double upper_bound = 1.5;
     std::uniform_real_distribution<double> unif(lower_bound, upper_bound);
     std::default_random_engine re;
     re.seed(time(NULL));
-    double a = unif(re);
+    double a;
     double low = 0;
     double up = 1;
     std::uniform_real_distribution<double> uni(low, up);
     std::default_random_engine r;
     r.seed(time(NULL));
-    double r_constant = 0.5;
+    double r_constant;
     double t;
     int T;
     vector<int> min;
     Data childPlaceholder;
     vector<int> indexes;
+    vector<int> indexess;
     Matrix holder;
     Data summ;
+    Matrix hold;
+    vector<int> tournamentIndexes;
+    Data tournamentSum;
+    vector<int> tournamentMax;
+    Data GeneticOutput;
 
-    for (int iter = 0; iter < 45; iter++) {
+    std::random_device rd; // obtain a random number from hardware
+    std::mt19937 gen(rd()); // seed the generator
+    std::uniform_int_distribution<> distr(0, (copychrom.size() - GenSize) - 1);
 
+    double Tournament = selectionRate * n;
+    int TournamentRate = round(Tournament);
+
+    hold.resize(TournamentRate);
+    // *** init hold vector ***
+    for (int i = 0; i < hold.size(); i++) {
+        hold[i].resize(NumberOfWeights * train->cols());
+    }
+    for (int i = 0; i < hold.size(); i++) {
+        for (int j = 0; j < hold[i].size(); j++)
+            hold[i][j] = 0;
+    }
+
+
+    for (int iter = 0; iter < iterMax; iter++) {
+        a = unif(re);
+        r_constant = uni(re);
         sum.clear();
         min.clear();
         indexes.clear();
         holder.clear();
         summ.clear();
+        indexess.clear();
+        tournamentMax.clear();
 
         for (int i = 0; i < n; i++) {
-            double sqe = genTrainSumSquaredError(normalize(i));
+            RbfTrain(convert(i));
+            double sqe = genTrainSumSquaredError(convert(i));
             sum.push_back(sqe);
-//            cout<<"SSE is : "<<sqe<<endl;
         }
 
+        // 1) Pass GenSize chromosomes to the next generation unchanged
         min = findBestIndices(sum, GenSize);
 
-        // 1) Number of parents that will be used. -> (even numbers within the range of [2,n-GenSize])
-        T = ((2 / 2) + rand() % ((copychrom.size() - GenSize - 2 + 2) / 2)) * 2;
         sort(min.begin(), min.end(), greater<int>());
 
         for (int i = 0; i < min.size(); i++) {
@@ -521,43 +525,95 @@ void rbf::runGen(int n) {
             copychrom.erase(copychrom.begin() + min[i]);
         }
 
-        // 2) Get the #T best chromosomes of the remainings based on their fitness.
-        // Get the indexes of the chromosome to be selected for crossover.
+        // 2) Tournament selection
+        for (int v = 0; v < TournamentRate; v++) {
+            tournamentIndexes.clear();
+            tournamentSum.clear();
+            int index = 0;
+            for (int j = 0; j < n / 4; j++) {
+                tournamentIndexes.push_back(distr(gen));
+            }
+            for (int k = 0; k < tournamentIndexes.size(); k++) {
+                RbfTrain(convert(tournamentIndexes[k]));
+                double sqe = genTrainSumSquaredError(convert(tournamentIndexes[k]));
+                tournamentSum.push_back(sqe);
+            }
+            index = findBestIndices(tournamentSum, 1)[0];
+
+            if (std::find(tournamentMax.begin(), tournamentMax.end(), tournamentIndexes[index]) != tournamentMax.end())
+                index = findBestIndices(tournamentSum, 2)[1];
+
+            tournamentMax.push_back(tournamentIndexes[index]);
+        }
+
         for (int i = 0; i < copychrom.size(); i++) {
-            double sqe = genTrainSumSquaredError(normalize(i));
+            RbfTrain(convert(i));
+            double sqe = genTrainSumSquaredError(convert(i));
             summ.push_back(sqe);
         }
-        indexes = findBestIndices(summ, T);
 
         // 3) Perform Whole Arithmetic Recombination on the selected parents.
-        for (int i = 1; i < indexes.size(); i += 2) {
+        for (int i = 1; i < tournamentMax.size(); i += 2) {
             for (int j = 0; j < copychrom[0].size(); j++) {
-                copychrom[indexes[i]][j] = (copychrom[indexes[i]][j] * a) + ((1 - a) * copychrom[indexes[i - 1]][j]);
-                copychrom[indexes[i - 1]][j] = copychrom[indexes[i - 1]][j] * a + (1 + a) * copychrom[indexes[i]][j];;
+                hold[i][j] = (copychrom[tournamentMax[i]][j] * a) + ((1 - a) * copychrom[tournamentMax[i - 1]][j]);
+                hold[i - 1][j] = (copychrom[tournamentMax[i - 1]][j] * a) + ((1 - a) * copychrom[tournamentMax[i]][j]);
             }
         }
 
-        // Reassign best chromosomes
-        for (int i = 0; i < holder.size(); i++)
-            copychrom.push_back(holder[i]);
+        indexess = findWorstIndices(summ, TournamentRate);
 
-        //mutation procedure
+        for (int i = 0; i < indexess.size(); i++)
+            copychrom[indexess[i]] = hold[i];
+
+        // 4) mutation procedure
         for (int i = 0; i < copychrom.size(); i++) {
             for (int j = 0; j < copychrom[i].size(); j++) {
-                t = uni(r);
-                if (t > 0.5) {
-                    double delta = Delta(iter, 45, decodedRight[j] - copychrom[i][j], r_constant);
-                    copychrom[i][j] = copychrom[i][j] + delta;
-                } else {
-                    double delta = Delta(iter, 45, copychrom[i][j] - decodedLeft[j], r_constant);
-                    copychrom[i][j] = copychrom[i][j] - delta;
+                double tt = uni(r);/**/
+                if (tt >= 0.05) {
+                    t = uni(r);
+                    if (t > 0.5) {
+                        double delta = Delta(iter, iterMax, decodedRight[j] - copychrom[i][j], r_constant);
+                        copychrom[i][j] = copychrom[i][j] + delta;
+                    } else {
+                        double delta = Delta(iter, iterMax, copychrom[i][j] - decodedLeft[j], r_constant);
+                        copychrom[i][j] = copychrom[i][j] - delta;
+                    }
                 }
             }
         }
+        // Reassign best chromosomes
+        for (int i = 0; i < holder.size(); i++)
+            copychrom.push_back(holder[i]);
     }
+
+    for (int i = 0; i < n; i++) {
+        RbfTrain(convert(i));
+        double sqe = genTrainSumSquaredError(convert(i));
+        GeneticOutput.push_back(sqe);
+    }
+
+    int genIndex = findBestIndices(GeneticOutput, 1)[0];
+
+    RbfTrain(convert(genIndex));
+    double sqe = genTrainSumSquaredError(convert(genIndex));
+
+    if (sqe <= sse) {
+        double difference = sse - sqe;
+
+        double result = (difference / sse) * 100;
+
+        cout << endl;
+        cout << "Genetic algorithm output : " << sqe << endl;
+        cout.precision(2);
+        cout << "Error decreased for : " << result << "%" << endl;
+
+    } else
+
+        cout << "bad or close result : " << sqe << endl;
+
 }
 
-void rbf::RbfTrain() {
+void rbf::run() {
     kmeans alg(train, NumberOfWeights);
     alg.run();
     //alg.CalculateVariance();
@@ -565,7 +621,11 @@ void rbf::RbfTrain() {
     alg.calculateGenVariance();
     centers = alg.getCenters();
     variance = alg.getVariance();
+    RbfTrain(centers);
+}
 
+void rbf::RbfTrain(vector<Data> c) {
+    weights.clear();
     Matrix A;
     A.resize(count);
     for (int i = 0; i < A.size(); i++)
@@ -574,7 +634,7 @@ void rbf::RbfTrain() {
     for (int i = 0; i < train->rows(); i++) {
         Data x = train->getX(i);
         for (int j = 0; j < NumberOfWeights; j++)
-            A[i][j] = gauss(x, centers[j], variance[j]); //? idia variance h diaforetiko variance gia kathe center?
+            A[i][j] = gauss(x, c[j], variance[j]); //? idia variance h diaforetiko variance gia kathe center?
     }
 
     Matrix AA = Pseudo_Inverse(A); // ean o A htan [20][10] o AA einai [10][20]
@@ -589,11 +649,9 @@ void rbf::RbfTrain() {
 
     for (int i = 0; i < result.size(); i++)
         weights[i] = result[i][0];
-
-
 }
 
-Data rbf::decodeChild(Data child) {
+Data rbf::decodeChild(Data &child) {
     vector<double>::iterator it = child.begin();
     for (int i = 0; i < child.size(); i++) {
         while (it != child.end()) {
@@ -606,3 +664,7 @@ Data rbf::decodeChild(Data child) {
     }
     return child;
 }
+
+
+
+
