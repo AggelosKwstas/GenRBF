@@ -2,7 +2,9 @@
 #include "kmeans.h"
 #include "rbf.h"
 
+
 using namespace std;
+
 
 int main() {
     Dataset test("iris.test");

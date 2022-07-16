@@ -622,6 +622,7 @@ void rbf::run() {
     RbfTrain(centers);
 }
 
+
 void rbf::RbfTrain(vector<Data> c) {
     weights.clear();
     Matrix A;
