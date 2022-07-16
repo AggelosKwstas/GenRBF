@@ -24,10 +24,12 @@ int main() {
     cout << " *** Genetic algorithm approach ***" << endl;
     myrbf.setBounds();
     int n;
+    int iterMax;
     cout<<endl;
-    cout<<"enter number of chromosomes : ";
+    cout<<"enter number of chromosomes:";
     cin>>n;
-    myrbf.runGen(n);
+    cout<<"enter number max generations:";
+    cin>>iterMax;
+    myrbf.runGen(n,iterMax);
     return 0;
 }
-

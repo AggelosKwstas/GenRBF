@@ -1,16 +1,18 @@
 #include "rbf.h"
-# include <math.h>
+# include <cmath>
 #include <iostream>
-#include <limits>
 #include <algorithm>
 #include <random>
 
 rbf::rbf() {
     NumberOfWeights = 1;
     dimension = 1;
-    train = NULL;
-    test = NULL;
+    train = nullptr;
+    test = nullptr;
     Initialization();
+    F_constant = 1.5;
+    maxRight = 0;
+    minLeft = 1e6;
 }
 
 void rbf::setTrainSet(Dataset *d) {
@@ -20,7 +22,7 @@ void rbf::setTrainSet(Dataset *d) {
 }
 
 void rbf::setTestSet(Dataset *d) {
-    if (train == NULL)
+    if (train == nullptr)
         exit(0);
     if (train->cols() != d->cols())
         exit(0);
@@ -33,7 +35,7 @@ void rbf::setNumberOfWeights(int n) {
     Initialization();
 }
 
-int rbf::getNumberOfWeights() {
+int rbf::getNumberOfWeights() const {
     return NumberOfWeights;
 }
 
@@ -42,10 +44,10 @@ void rbf::Initialization() {
     centers.resize(NumberOfWeights);
     variance.resize(NumberOfWeights);
     for (int i = 0; i < NumberOfWeights; i++) {
-        centers[i].resize(dimension); //analoga poses diastaseis einai
+        centers[i].resize(dimension);
         for (int j = 0; j < dimension; j++)
-            centers[i][j] = 0; // arxikopoihsh se 0 twn kentrwn
-        variance[i] = 0; // arxikopoihsh se 0 tou σ
+            centers[i][j] = 0;
+        variance[i] = 0;
         weights[i] = 2.0 * (rand() * 1.0 / RAND_MAX - 1.0);
     }
 }
@@ -364,7 +366,6 @@ double rbf::genTrainSumSquaredError(vector<Data> genCenter) {
 void rbf::setBounds() {
     Left.resize((train->cols() + 1) * getNumberOfWeights());
     Right.resize((train->cols() + 1) * getNumberOfWeights());
-    F_constant = 1.5;
     int k = getNumberOfWeights();
     int m = 0;
     for (int i = 0; i < k; i++) {
@@ -435,15 +436,12 @@ vector<int> rbf::findWorstIndices(vector<double> &times, const int &N) {
     return vector<int>(indices.begin(), indices.begin() + N);
 }
 
-void rbf::runGen(int n) {
-    int iterMax = 200;
-    maxRight = 0;
+void rbf::runGen(int n,int iterMax) {
     Data decodedRight = decodeChild(Right);
     for (int i = 0; i < decodedRight.size(); i++) {
         if (decodedRight[i] > maxRight)
             maxRight = decodedRight[i];
     }
-    minLeft = 1e6;
     Data decodedLeft = decodeChild(Left);
     for (int i = 0; i < decodedLeft.size(); i++) {
         if (decodedLeft[i] < minLeft)
@@ -508,10 +506,11 @@ void rbf::runGen(int n) {
         summ.clear();
         indexess.clear();
         tournamentMax.clear();
-
+        cout<<"-----------------------------------"<<endl;
         for (int i = 0; i < n; i++) {
             RbfTrain(convert(i));
             double sqe = genTrainSumSquaredError(convert(i));
+            cout<<sqe<<endl;
             sum.push_back(sqe);
         }
 
@@ -530,7 +529,7 @@ void rbf::runGen(int n) {
             tournamentIndexes.clear();
             tournamentSum.clear();
             int index = 0;
-            for (int j = 0; j < n / 4; j++) {
+            for (int j = 0; j < 10; j++) {
                 tournamentIndexes.push_back(distr(gen));
             }
             for (int k = 0; k < tournamentIndexes.size(); k++) {
@@ -634,18 +633,18 @@ void rbf::RbfTrain(vector<Data> c) {
     for (int i = 0; i < train->rows(); i++) {
         Data x = train->getX(i);
         for (int j = 0; j < NumberOfWeights; j++)
-            A[i][j] = gauss(x, c[j], variance[j]); //? idia variance h diaforetiko variance gia kathe center?
+            A[i][j] = gauss(x, c[j], variance[j]);
     }
 
-    Matrix AA = Pseudo_Inverse(A); // ean o A htan [20][10] o AA einai [10][20]
+    Matrix AA = Pseudo_Inverse(A);
 
     Matrix output;
     output.resize(train->rows());
     for (int i = 0; i < train->rows(); i++)
-        output[i].push_back(train->getY(i)); // o output einai [20][1]
+        output[i].push_back(train->getY(i));
 
     Matrix result = Multiply(AA,
-                             output); // epomenws o result tha einai [10][1] kai ekxwroume ta apotelesmata sto weights
+                             output);
 
     for (int i = 0; i < result.size(); i++)
         weights[i] = result[i][0];
@@ -664,7 +663,3 @@ Data rbf::decodeChild(Data &child) {
     }
     return child;
 }
-
-
-
-

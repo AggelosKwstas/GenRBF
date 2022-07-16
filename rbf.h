@@ -26,15 +26,15 @@ private:
 
     Matrix Multiply(Matrix &A, Matrix &B);
 
-    Matrix Inverse(Matrix &mat);
+    static Matrix Inverse(Matrix &mat);
 
     Matrix Pseudo_Inverse(Matrix &A);
 
     void Initialization();
 
-    double gauss(Data &p, Data &c, double s);
+    static double gauss(Data &p, Data &c, double s);
 
-    double distance(Data &x, Data &y);
+    static double distance(Data &x, Data &y);
 
     Matrix chromosomes;
     Matrix copychrom;
@@ -51,11 +51,11 @@ public:
 
     void setNumberOfWeights(int n);
 
-    int getNumberOfWeights();
+    int getNumberOfWeights() const;
 
     void setClasses();
 
-    bool isEqual(double a, double b);
+    static bool isEqual(double a, double b);
 
     void RbfTrain(vector<Data> c);
 
@@ -72,7 +72,7 @@ public:
 
     void setChromosomes(int n, double max, double min);
 
-    void runGen(int n);
+    void runGen(int n,int IterMax);
 
     void decode(double element);
 
@@ -96,3 +96,4 @@ public:
 };
 
 #endif //KMEANS_CPP_RBF_H
+
