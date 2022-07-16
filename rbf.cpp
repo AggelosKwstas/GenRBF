@@ -506,11 +506,10 @@ void rbf::runGen(int n,int iterMax) {
         summ.clear();
         indexess.clear();
         tournamentMax.clear();
-        cout<<"-----------------------------------"<<endl;
+
         for (int i = 0; i < n; i++) {
             RbfTrain(convert(i));
             double sqe = genTrainSumSquaredError(convert(i));
-            cout<<sqe<<endl;
             sum.push_back(sqe);
         }
 
