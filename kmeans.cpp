@@ -1,7 +1,5 @@
 #include <algorithm>
-
 #include <limits>
-
 #include "kmeans.h"
 
 kmeans::kmeans(Dataset *d, int NumberOfTeams) {
