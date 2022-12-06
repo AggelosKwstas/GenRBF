@@ -1,5 +1,5 @@
 #include "rbf.h"
-# include <cmath>
+#include <cmath>
 #include <iostream>
 #include <algorithm>
 #include <random>
